@@ -134,4 +134,12 @@ func main() {
 	os.Mkdir(outDir, 0700)
 
 	filepath.WalkDir(flag.Arg(0), walkPath)
+
+	no_serve, _ := os.ReadFile(filepath.Join(flag.Arg(0), "no-serve.txt"))
+	var real_no_serve = strings.Split(string(no_serve), "\n")
+
+	for _, val := range real_no_serve {
+		os.Remove(filepath.Join(outDir, strings.ReplaceAll(val, ".hcsc", "")+".html"))
+	}
+
 }

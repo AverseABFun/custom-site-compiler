@@ -1,2 +1,2 @@
-prefix.hcsc
-suffix.hcsc
+prefix
+suffix

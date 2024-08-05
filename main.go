@@ -197,6 +197,20 @@ func mdToHTML(markdown string) string {
 	return string(output)
 }
 
+func getFileTypeFormat(kind string) string {
+	var format = ""
+	switch kind {
+	case ".js":
+		format = "<script src=\"{path}\"></script>"
+	case ".css":
+		format = "<link rel=\"stylesheet\" href=\"{path}\">"
+	default:
+		logger.Logf(logger.LogWarning, "Unsupported file type in static directive: %s", kind)
+		return ""
+	}
+	return format
+}
+
 func walkPath(path string, d fs.DirEntry, _ error) error {
 	if depth >= *depthLimit {
 		logger.Logf(logger.LogFatal, "Reached depth limit of %d! There is probably a recursive include somewhere in your templates.", depthLimit)
@@ -221,17 +235,7 @@ OuterRegexLoop:
 		switch keyword {
 		case "static":
 			var kind = filepath.Ext(args[0])
-			var format = ""
-			switch kind {
-			case ".js":
-				format = "<script src=\"{path}\"></script>"
-			case ".css":
-				format = "<link rel=\"stylesheet\" href=\"{path}\">"
-			default:
-				logger.Logf(logger.LogWarning, "Unsupported file type in static directive: %s", kind)
-				stringData = strings.ReplaceAll(stringData, val[0], "")
-				continue OuterRegexLoop
-			}
+			format := getFileTypeFormat(kind)
 			os.Mkdir(filepath.Join(outDir, "static"), 0700)
 			var file, err = os.ReadFile(filepath.Join(flag.Arg(0), args[0]))
 			if os.IsNotExist(err) {
@@ -292,9 +296,22 @@ OuterRegexLoop:
 	return nil
 }
 
+var clean = flag.Bool("clean", false, "clean out old files in the output directory")
+
 func main() {
 	logger.Log(logger.LogInfo, "Averse's custom site compiler running...")
 	flag.Parse()
+
+	if flag.Arg(1) != "" && !strings.HasPrefix(flag.Arg(1), "-build") {
+		outDir = flag.Arg(1)
+		if !strings.HasSuffix(outDir, "/") {
+			outDir = outDir + "/"
+		}
+	}
+
+	if *clean {
+		os.RemoveAll(outDir)
+	}
 
 	info, err := os.Stat(flag.Arg(0))
 	if os.IsNotExist(err) {
@@ -302,12 +319,6 @@ func main() {
 	}
 	if !info.IsDir() {
 		logger.Log(logger.LogFatal, "Path provided is not a directory")
-	}
-	if flag.Arg(1) != "" && !strings.HasPrefix(flag.Arg(1), "-build") {
-		outDir = flag.Arg(1)
-		if !strings.HasSuffix(outDir, "/") {
-			outDir = outDir + "/"
-		}
 	}
 	os.Mkdir(outDir, 0700)
 

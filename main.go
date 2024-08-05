@@ -216,6 +216,7 @@ func walkPath(path string, d fs.DirEntry, _ error) error {
 		logger.Logf(logger.LogFatal, "Reached depth limit of %d! There is probably a recursive include somewhere in your templates.", depthLimit)
 	}
 	if d.IsDir() {
+		filepath.WalkDir(path, walkPath)
 		return nil
 	}
 	if !strings.HasSuffix(path, ".hcsc") {

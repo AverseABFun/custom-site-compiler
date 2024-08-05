@@ -1,9 +1,8 @@
-<!DOCTYPE html>
+<!DOCTYPE html lang="en-US">
 <html>
 <head>
     <title>Example website - {{title}}</title>
     <meta charset="UTF-8">
-    <meta name="language" content="english"> 
     <meta http-equiv="content-type" content="text/html">
     <meta name="author" content="Arthur Beck">
     <meta name="designer" content="Arthur Beck">

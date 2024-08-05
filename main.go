@@ -122,6 +122,8 @@ var objects = map[string]map[string]string{}
 var depth = int64(0)
 var depthLimit = flag.Int64("maximum-depth", 100, "Maximum depth limit")
 
+var currentFileName = ""
+
 func processStringForIfs(input string) string {
 	var output strings.Builder
 	lines := strings.Split(input, "\n")
@@ -176,6 +178,10 @@ func processStringForIfs(input string) string {
 
 			input = strings.ReplaceAll(input, "{{"+key+"}}", val)
 			lines = strings.Split(input, "\n")
+		} else if strings.HasPrefix(line, "<?rename_file ") && !skipLines {
+			thing := strings.TrimPrefix(line, "<?rename_file ")
+			thing = strings.TrimSuffix(thing, ">")
+			currentFileName = thing
 		} else {
 			if !skipLines {
 				output.WriteString(line + "\n")
@@ -227,7 +233,7 @@ OuterRegexLoop:
 				continue OuterRegexLoop
 			}
 			os.Mkdir(filepath.Join(outDir, "static"), 0700)
-			var file, err = os.ReadFile(filepath.Join(filepath.Dir(path), args[0]))
+			var file, err = os.ReadFile(filepath.Join(flag.Arg(0), args[0]))
 			if os.IsNotExist(err) {
 				logger.Logf(logger.LogWarning, "Path provided in static directive(%s) does not exist", args[0])
 				stringData = strings.ReplaceAll(stringData, val[0], "")
@@ -247,7 +253,7 @@ OuterRegexLoop:
 
 			logger.Logf(logger.LogDebug, "Current stringData: %s", stringData)
 		case "include":
-			args[0] = filepath.Join(filepath.Dir(path), args[0])
+			args[0] = filepath.Join(flag.Arg(0), args[0])
 			info, err := os.Stat(args[0])
 			if os.IsNotExist(err) {
 				logger.Logf(logger.LogWarning, "Path provided in include directive(%s) does not exist", args[0])
@@ -277,13 +283,11 @@ OuterRegexLoop:
 		}
 	}
 
+	currentFileName = strings.TrimSuffix(d.Name(), ".hcsc") + ".html"
+
 	stringData = processStringForIfs(stringData)
-	logger.Log(logger.LogDebug, stringData)
 
-	os.WriteFile(outDir+strings.TrimSuffix(d.Name(), ".hcsc")+".html", []byte(stringData), 0700)
-
-	var f, _ = os.ReadFile(outDir + strings.TrimSuffix(d.Name(), ".hcsc") + ".html")
-	logger.Logf(logger.LogDebug, "%s", string(f))
+	os.WriteFile(outDir+currentFileName, []byte(stringData), 0700)
 
 	return nil
 }

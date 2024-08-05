@@ -237,7 +237,7 @@ OuterRegexLoop:
 			var kind = filepath.Ext(args[0])
 			format := getFileTypeFormat(kind)
 			os.Mkdir(filepath.Join(outDir, "static"), 0700)
-			var file, err = os.ReadFile(filepath.Join(flag.Arg(0), args[0]))
+			var file, err = os.ReadFile(filepath.Join(templatePath, args[0]))
 			if os.IsNotExist(err) {
 				logger.Logf(logger.LogWarning, "Path provided in static directive(%s) does not exist", args[0])
 				stringData = strings.ReplaceAll(stringData, val[0], "")
@@ -257,7 +257,7 @@ OuterRegexLoop:
 
 			logger.Logf(logger.LogDebug, "Current stringData: %s", stringData)
 		case "include":
-			args[0] = filepath.Join(flag.Arg(0), args[0])
+			args[0] = filepath.Join(templatePath, args[0])
 			info, err := os.Stat(args[0])
 			if os.IsNotExist(err) {
 				logger.Logf(logger.LogWarning, "Path provided in include directive(%s) does not exist", args[0])
@@ -297,10 +297,52 @@ OuterRegexLoop:
 }
 
 var clean = flag.Bool("clean", false, "clean out old files in the output directory")
+var initDir = flag.String("init", "", "initalizes a new project with the templates directory")
+
+func getFilesWithExtension(ext string) ([]string, error) {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		logger.Logf(logger.LogWarning, "Error getting current directory:", err)
+		return nil, fmt.Errorf("error getting current directory")
+	}
+
+	// Define a slice to store the found files.
+	var filesWithExtension []string
+
+	// Walk through the current directory.
+	err = filepath.Walk(currentDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// Check if the file has the desired extension.
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ext) {
+			filesWithExtension = append(filesWithExtension, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		logger.Logf(logger.LogWarning, "Error walking the path:", err)
+		return nil, fmt.Errorf("error walking the path")
+	}
+	return filesWithExtension, nil
+}
+
+var templatePath = ""
+var staticPath = "{outDir}/static"
 
 func main() {
 	logger.Log(logger.LogInfo, "Averse's custom site compiler running...")
 	flag.Parse()
+
+	if *initDir != "" {
+		os.Mkdir(*initDir, 0700)
+		os.Mkdir(filepath.Join(*initDir, "templates"), 0700)
+		os.Mkdir(filepath.Join(*initDir, "out"), 0700)
+		os.WriteFile(filepath.Join(*initDir, ".gitignore"), []byte("# custom site compiler\nout/\n"), 0700)
+		os.WriteFile(filepath.Join(*initDir, "default.cscproj"), []byte("templates=templates\nout=out\nstatic=out/static\nbuildArgs=production\n"), 0700)
+		return
+	}
 
 	if flag.Arg(1) != "" && !strings.HasPrefix(flag.Arg(1), "-build") {
 		outDir = flag.Arg(1)
@@ -313,12 +355,57 @@ func main() {
 		os.RemoveAll(outDir)
 	}
 
-	info, err := os.Stat(flag.Arg(0))
+	templatePath = flag.Arg(0)
+	if templatePath == "" {
+		files, err := getFilesWithExtension(".cscproj")
+		if err != nil {
+			panic(err)
+		}
+		if len(files) != 1 {
+			templatePath = "templates"
+		} else {
+			f, err := os.ReadFile(files[0])
+			if err != nil {
+				panic(err)
+			}
+			splitted := strings.Split(string(f), "\n")
+			for _, val := range splitted {
+				sploit := strings.SplitN(val, "=", 2)
+				var key = sploit[0]
+				var val = sploit[1]
+				switch key {
+				case "templates":
+					templatePath = val
+				case "out":
+					outDir = val
+					if !strings.HasSuffix(outDir, "/") {
+						outDir = outDir + "/"
+					}
+				case "static":
+					staticPath = val
+				case "buildArgs":
+					customFlagRegex := regexp.MustCompile(`^-build:([a-zA-Z0-9]+)(?:=([a-zA-Z0-9]+))?$`)
+
+					for _, arg := range strings.Split(val, " ") {
+						if matches := customFlagRegex.FindStringSubmatch(arg); matches != nil {
+							if matches[2] == "" {
+								matches[2] = "true"
+							}
+							buildArgs[matches[1]] = matches[2]
+						}
+					}
+				}
+			}
+		}
+	}
+	staticPath = strings.ReplaceAll(staticPath, "{outDir}", outDir)
+
+	info, err := os.Stat(templatePath)
 	if os.IsNotExist(err) {
-		logger.Log(logger.LogFatal, "Path provided does not exist")
+		logger.Logf(logger.LogFatal, "Path %s does not exist", templatePath)
 	}
 	if !info.IsDir() {
-		logger.Log(logger.LogFatal, "Path provided is not a directory")
+		logger.Logf(logger.LogFatal, "Path %s is not a directory", templatePath)
 	}
 	os.Mkdir(outDir, 0700)
 
@@ -333,9 +420,9 @@ func main() {
 		}
 	}
 
-	filepath.WalkDir(flag.Arg(0), walkPath)
+	filepath.WalkDir(templatePath, walkPath)
 
-	no_serve, _ := os.ReadFile(filepath.Join(flag.Arg(0), "no-serve.txt"))
+	no_serve, _ := os.ReadFile(filepath.Join(templatePath, "no-serve.txt"))
 	var real_no_serve = strings.Split(string(no_serve), "\n")
 
 	for _, val := range real_no_serve {

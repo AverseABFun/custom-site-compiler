@@ -1,0 +1,4 @@
+templates=example-templates
+out=out
+static={outDir}/static
+buildArgs=-build:production

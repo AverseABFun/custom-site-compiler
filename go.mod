@@ -1,4 +1,4 @@
-module github.com/AverseABFun/custom-site-compiler
+module github.com/averseabfun/custom-site-compiler
 
 go 1.22.5
 

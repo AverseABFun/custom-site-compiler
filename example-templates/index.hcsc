@@ -1,4 +1,15 @@
-<?include "prefix.hcsc">
+<?include "prefix.hcsc" title=Example>
 <h1>Test!!</h1>
 <p>This is a test!</p>
+<?if build.production>
+<?setvar test=not cool>
+<p>This is a production build!</p>
+<?else>
+<?setvar test=cool>
+<p>This isn't a production build!</p>
+<?endif>
+<p>lol testing is {{test}}</p>
+<?markdown>
+# This was written in markdown!
+<?endmd>
 <?include "suffix.hcsc">

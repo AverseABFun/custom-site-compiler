@@ -370,7 +370,13 @@ func main() {
 			}
 			splitted := strings.Split(string(f), "\n")
 			for _, val := range splitted {
+				if val == "" {
+					continue
+				}
 				sploit := strings.SplitN(val, "=", 2)
+				if len(sploit) < 2 {
+					continue
+				}
 				var key = sploit[0]
 				var val = sploit[1]
 				switch key {

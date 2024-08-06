@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -211,6 +212,30 @@ func getFileTypeFormat(kind string) string {
 	return format
 }
 
+func Copy(srcpath, dstpath string) (err error) {
+	r, err := os.Open(srcpath)
+	if err != nil {
+		return err
+	}
+	defer r.Close() // ignore error: file was opened read-only.
+
+	w, err := os.Create(dstpath)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		// Report the error, if any, from Close, but do so
+		// only if there isn't already an outgoing error.
+		if c := w.Close(); err == nil {
+			err = c
+		}
+	}()
+
+	_, err = io.Copy(w, r)
+	return err
+}
+
 func walkPath(path string, d fs.DirEntry, _ error) error {
 	if depth >= *depthLimit {
 		logger.Logf(logger.LogFatal, "Reached depth limit of %d! There is probably a recursive include somewhere in your templates.", depthLimit)
@@ -233,6 +258,11 @@ OuterRegexLoop:
 		var keyword = val[1]
 		var args = createArgsFromSlice(strings.Split(val[2], " "))
 		switch keyword {
+		case "copyout":
+			var file = args[0]
+			if err := Copy(file, outDir); err != nil {
+				panic(err)
+			}
 		case "static":
 			var kind = filepath.Ext(args[0])
 			format := getFileTypeFormat(kind)

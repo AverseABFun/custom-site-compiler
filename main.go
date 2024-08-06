@@ -251,10 +251,11 @@ func walkPath(path string, d fs.DirEntry, _ error) error {
 	if depth >= *depthLimit {
 		logger.Logf(logger.LogFatal, "Reached depth limit of %d! There is probably a recursive include somewhere in your templates.", depthLimit)
 	}
+	logger.Logf(logger.LogDebug, path)
 	if d.IsDir() {
 		if !strings.HasPrefix(d.Name(), ".") && !sliceHas(visited, path) {
+			logger.Logf(logger.LogDebug, "visiting")
 			visited = append(visited, path)
-			logger.Logf(logger.LogDebug, path)
 			depth++
 			filepath.WalkDir(path, walkPath)
 			depth--
@@ -336,9 +337,11 @@ OuterRegexLoop:
 		}
 	}
 
-	currentFileName = strings.TrimSuffix(d.Name(), ".hcsc") + ".html"
+	currentFileName = strings.TrimSuffix(strings.Replace(path, templatePath+"/", "", 1), ".hcsc") + ".html"
 
 	stringData = processStringForIfs(stringData)
+
+	os.Mkdir(outDir+filepath.Dir(strings.Replace(path, templatePath+"/", "", 1)), 0700)
 
 	os.WriteFile(outDir+currentFileName, []byte(stringData), 0700)
 

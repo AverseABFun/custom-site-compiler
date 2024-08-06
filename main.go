@@ -236,13 +236,28 @@ func Copy(srcpath, dstpath string) (err error) {
 	return err
 }
 
+var visited = []string{}
+
+func sliceHas[T comparable](slice []T, element T) bool {
+	for _, val := range slice {
+		if val == element {
+			return true
+		}
+	}
+	return false
+}
+
 func walkPath(path string, d fs.DirEntry, _ error) error {
 	if depth >= *depthLimit {
 		logger.Logf(logger.LogFatal, "Reached depth limit of %d! There is probably a recursive include somewhere in your templates.", depthLimit)
 	}
 	if d.IsDir() {
-		if !strings.HasPrefix(d.Name(), ".") {
+		if !strings.HasPrefix(d.Name(), ".") && !sliceHas(visited, path) {
+			visited = append(visited, path)
+			logger.Logf(logger.LogDebug, path)
+			depth++
 			filepath.WalkDir(path, walkPath)
+			depth--
 		}
 		return nil
 	}

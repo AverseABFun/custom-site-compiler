@@ -371,7 +371,7 @@ func main() {
 		os.Mkdir(filepath.Join(*initDir, "templates"), 0700)
 		os.Mkdir(filepath.Join(*initDir, "out"), 0700)
 		os.WriteFile(filepath.Join(*initDir, ".gitignore"), []byte("# custom site compiler\nout/\n"), 0700)
-		os.WriteFile(filepath.Join(*initDir, "default.cscproj"), []byte("templates=templates\nout=out\nstatic={outDir}/static\nbuildArgs=-build:production\nrecursive=\n"), 0700)
+		os.WriteFile(filepath.Join(*initDir, "default.cscproj"), []byte("templates=templates\nout=out\nstatic={outDir}/static\nbuildArgs=-build:production\n"), 0700)
 		return
 	}
 
@@ -387,7 +387,6 @@ func main() {
 	}
 
 	templatePath = flag.Arg(0)
-	recursive := []string{}
 	if templatePath == "" {
 		files, err := getFilesWithExtension(".cscproj")
 		if err != nil {
@@ -412,8 +411,6 @@ func main() {
 				var key = sploit[0]
 				var val = sploit[1]
 				switch key {
-				case "recursive":
-					recursive = append(recursive, strings.Split(val, ",")...)
 				case "templates":
 					templatePath = val
 				case "out":
@@ -467,11 +464,5 @@ func main() {
 
 	for _, val := range real_no_serve {
 		os.Remove(filepath.Join(outDir, strings.ReplaceAll(val, ".hcsc", "")+".html"))
-	}
-
-	for _, val := range recursive {
-		os.Chdir(val)
-		os.Args = append([]string{}, os.Args[0])
-		main()
 	}
 }

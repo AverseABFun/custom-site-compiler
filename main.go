@@ -263,6 +263,7 @@ OuterRegexLoop:
 			if err := Copy(file, outDir); err != nil {
 				panic(err)
 			}
+			stringData = strings.ReplaceAll(stringData, val[0], "")
 		case "static":
 			var kind = filepath.Ext(args[0])
 			format := getFileTypeFormat(kind)

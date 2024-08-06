@@ -260,7 +260,7 @@ OuterRegexLoop:
 		switch keyword {
 		case "copyout":
 			var file = args[0]
-			if err := Copy(filepath.Join(templatePath, file), outDir); err != nil {
+			if err := Copy(filepath.Join(templatePath, file), filepath.Join(outDir, file)); err != nil {
 				panic(err)
 			}
 			stringData = strings.ReplaceAll(stringData, val[0], "")

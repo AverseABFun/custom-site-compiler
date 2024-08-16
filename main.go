@@ -480,10 +480,24 @@ func main() {
 
 	filepath.WalkDir(templatePath, walkPath)
 
-	no_serve, _ := os.ReadFile(filepath.Join(templatePath, "no-serve.txt"))
-	var real_no_serve = strings.Split(string(no_serve), "\n")
+	if _, err := os.Stat(filepath.Join(templatePath, "no-serve.txt")); err != nil {
+		no_serve, _ := os.ReadFile(filepath.Join(templatePath, "no-serve.txt"))
+		var real_no_serve = strings.Split(string(no_serve), "\n")
 
-	for _, val := range real_no_serve {
-		os.Remove(filepath.Join(outDir, strings.ReplaceAll(val, ".hcsc", "")+".html"))
+		for _, val := range real_no_serve {
+			os.Remove(filepath.Join(outDir, strings.ReplaceAll(val, ".hcsc", "")+".html"))
+		}
+	}
+	renames_file, _ := os.ReadFile(filepath.Join(templatePath, "renames.txt"))
+	var split_renames = strings.Split(string(renames_file), "\n")
+	var renames [][]string
+	for _, val := range split_renames {
+		renames = append(renames, strings.Split(val, "="))
+	}
+	for _, val := range renames {
+		if len(val) != 2 {
+			continue
+		}
+		os.Rename(filepath.Join(outDir, val[0]), filepath.Join(outDir, val[1]))
 	}
 }

@@ -271,6 +271,8 @@ func walkPath(path string, d fs.DirEntry, _ error) error {
 	}
 	var stringData = string(data)
 
+	var macros = map[string]string{}
+
 OuterRegexLoop:
 	for _, val := range keywordsRegex.FindAllStringSubmatch(stringData, -1) {
 		logger.Logf(logger.LogDebug, "%v", val)
@@ -334,6 +336,16 @@ OuterRegexLoop:
 			}
 
 			stringData = strings.ReplaceAll(stringData, val[0], strData)
+		case "macro":
+			var name = args[0]
+			var content = args[1]
+			macros[name] = content
+		default:
+			var content, ok = macros[keyword]
+			if !ok {
+				continue OuterRegexLoop
+			}
+			stringData = strings.ReplaceAll(stringData, val[0], content)
 		}
 	}
 
